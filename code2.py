@@ -18,14 +18,12 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 def convert(fasta_file):
     p = Path(fasta_file)
-    if not p.exists():
-        raise FileNotFoundError(f"No file: {p}")
+    
 
     with p.open("r") as fh:
         records = list(SeqIO.parse(fh, "fasta"))
 
-    if not records:
-        raise ValueError("No sequences found in FASTA")
+    
 
     ids = [r.id for r in records]
     seqs = [str(r.seq) for r in records]
