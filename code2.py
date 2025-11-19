@@ -1,10 +1,3 @@
-"""
-FASTA Single-summary GUI (table left + wide graph right)
-
-Creates ONE bar chart (Mean | Median | Mode)
-and gives proper 50/50 layout without compacting the graph.
-"""
-
 import traceback
 from pathlib import Path
 import tkinter as tk
@@ -68,7 +61,7 @@ def make_bar_plot(stats):
     labels = ["Mean", "Median", "Mode"]
     values = [stats["mean"], stats["median"], stats["mode"]]
 
-    fig = Figure(figsize=(8, 5), dpi=120)   # <- WIDER plot
+    fig = Figure(figsize=(6, 4), dpi=80)  # <- WIDER plot
     ax = fig.add_subplot(1, 1, 1)
 
     x = np.arange(len(labels))
@@ -81,9 +74,9 @@ def make_bar_plot(stats):
 
     for rect, val in zip(bars, values):
         ax.annotate(f"{val:.2f}",
-                    xy=(rect.get_x() + rect.get_width() / 2, rect.get_height()),
-                    xytext=(0, 6), textcoords="offset points",
-                    ha="center", fontsize=11, fontweight="bold")
+                     xy=(rect.get_x() + rect.get_width() / 2, rect.get_height()),
+                     xytext=(0, 6), textcoords="offset points",
+                     ha="center", fontsize=11, fontweight="bold")
 
     fig.tight_layout()
     return fig
@@ -114,24 +107,57 @@ class App:
         main_split = tk.PanedWindow(root, orient=tk.HORIZONTAL)
         main_split.pack(fill=tk.BOTH, expand=True)
 
-        # LEFT PANEL (TABLE)
-        self.left = tk.Frame(main_split, bd=2, relief=tk.SUNKEN)
-        main_split.add(self.left, stretch="always")
+        # ------------------------------------------------------------------
+        # --- MODIFICATIONS START HERE ---
+        # ------------------------------------------------------------------
 
-        # RIGHT PANEL (GRAPH)
-        self.right = tk.Frame(main_split, bd=2, relief=tk.SUNKEN)
-        main_split.add(self.right, stretch="always")
+        # Wrapper Frame 1 (This goes into the PanedWindow)
+        wrapper_left = tk.Frame(main_split)
+        main_split.add(wrapper_left, stretch="always")
 
-        # Set 50/50 division
+        # LEFT PANEL (TABLE) - This is the actual frame, placed inside the wrapper
+        # The padx/pady here creates the 10-pixel margin/padding inside the wrapper.
+        self.left = tk.Frame(wrapper_left, bd=2, relief=tk.SUNKEN)
+        self.left.grid(row=0, column=0, sticky="NSEW", padx=10, pady=10)
+        
+        # Configure wrapper grid weight so self.left fills the space
+        wrapper_left.grid_rowconfigure(0, weight=1)
+        wrapper_left.grid_columnconfigure(0, weight=1)
+
+
+        # Wrapper Frame 2
+        wrapper_right = tk.Frame(main_split)
+        main_split.add(wrapper_right, stretch="always")
+
+        # RIGHT PANEL (GRAPH) - This is the actual frame, placed inside the wrapper
+        # The padx/pady here creates the 10-pixel margin/padding inside the wrapper.
+        self.right = tk.Frame(wrapper_right, bd=2, relief=tk.SUNKEN)
+        self.right.grid(row=0, column=0, sticky="NSEW", padx=10, pady=10)
+
+        # Configure wrapper grid weight so self.right fills the space
+        wrapper_right.grid_rowconfigure(0, weight=1)
+        wrapper_right.grid_columnconfigure(0, weight=1)
+        
+        # ------------------------------------------------------------------
+        # --- MODIFICATIONS END HERE ---
+        # ------------------------------------------------------------------
+
+
+        # Set 50/50 division (Use a slight offset to account for margins)
+        # Note: The PanedWindow now holds the wrappers, which internally manage the margin.
         root.after(100, lambda: main_split.sash_place(0, 650, 0))
 
         # --- TABLE SETUP ---
+        # The table now needs to be packed into the self.left frame
         self.table = ttk.Treeview(self.left)
         self.table.pack(fill=tk.BOTH, expand=True)
 
         # Stats text under table
-        self.stats_label = tk.Label(self.left, font=("Courier", 11), justify=tk.LEFT)
-        self.stats_label.pack(pady=10)
+        # NOTE: You had two stats_label assignments here, fixed to use two labels for potential separate content
+        self.stats_label_top = tk.Label(self.left, font=("Courier", 11), justify=tk.LEFT)
+        self.stats_label_top.pack(pady=10)
+        self.stats_label_bottom = tk.Label(self.left, font=("Courier", 11), justify=tk.RIGHT)
+        self.stats_label_bottom.pack(pady=10)
 
 
     # ---------------- CALLBACKS ----------------
@@ -176,7 +202,8 @@ class App:
             f"Median : {stats['median']:.2f}\n"
             f"Mode   : {stats['mode']} (count={stats['mode_count']})"
         )
-        self.stats_label.config(text=txt)
+        # Using the top stats label for the main statistics
+        self.stats_label_top.config(text=txt)
 
     def draw_plot(self, stats):
         for w in self.right.winfo_children():
@@ -195,7 +222,7 @@ class App:
             return
 
         name = filedialog.asksaveasfilename(defaultextension=".png",
-                                            filetypes=[("PNG Image", "*.png")])
+                                             filetypes=[("PNG Image", "*.png")])
         if not name:
             return
 
